@@ -2,64 +2,78 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button"; // Assuming your Button component is fine
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import Image from "next/image"; // Import Next.js Image component
+import Image from "next/image";
+import { z } from "zod"; // Import Zod
 
-// --- Type Definitions ---
-interface Product {
-  id: string;
-  name: string;
-  image: string; // The URL for the image
-  price: number;
-}
+// --- 1. Zod Schema Definition ---
+// Define the expected shape of a single product
+const ProductSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  image: z.string().url(), // Ensures the image is a valid URL string
+  price: z.number().positive(), // Ensures price is a positive number
+});
 
-// --- Mock Product Data (Replace with real API fetching) ---
-// Note: In a real-world app, you would still fetch the data as you were,
-// but for a better demonstration and avoiding runtime errors for the mock,
-// I'll use a local mock array for the image paths.
-const mockProducts: Product[] = [
-  { id: "p1", name: "Sleek Sneaker", image: "/mock-product-1.jpg", price: 89.99 },
-  { id: "p2", name: "Utility Bag", image: "/mock-product-2.jpg", price: 45.00 },
-  { id: "p3", name: "Crop Hoodie", image: "/mock-product-3.jpg", price: 59.99 },
-];
-// NOTE: You'll need to create or provide these images in your public folder!
+// Define the expected shape of the API response (an array of products)
+const ProductsArraySchema = z.array(ProductSchema);
+
+// Infer the TypeScript type from the Zod schema for type safety
+type Product = z.infer<typeof ProductSchema>;
 
 // --- Component ---
 export default function Hero() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const totalRemainingProducts = 250; // Hardcoded, but could be fetched from API
+  const [error, setError] = useState<string | null>(null);
+  
+  // Hardcoded for now, but in a real app, fetch this total count separately
+  const totalRemainingProducts = 250; 
 
   useEffect(() => {
-    // Simulating API Fetch
-    const fetchProducts = async () => {
+    const fetchAndValidateProducts = async () => {
       setLoading(true);
+      setError(null); // Reset error state
+      
+      const apiEndpoint = `${process.env.NEXT_PUBLIC_API_URL}/products?limit=3`;
+      
+      if (!process.env.NEXT_PUBLIC_API_URL) {
+          setError("API URL is not configured. Please check NEXT_PUBLIC_API_URL.");
+          setLoading(false);
+          return;
+      }
+
       try {
-        // --- REAL FETCH (Comment out the line below and uncomment this section) ---
-        /*
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products?limit=3`, {
-          cache: "no-store",
+        const res = await fetch(apiEndpoint, {
+          cache: "no-store", // Ensure real-time fetch on every component load
         });
-        const data = await res.json();
-        setProducts(data);
-        */
 
-        // --- MOCK DATA (For demonstration) ---
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate delay
-        setProducts(mockProducts);
-        // --- END MOCK DATA ---
+        if (!res.ok) {
+          throw new Error(`API returned status ${res.status}`);
+        }
 
-      } catch (error) {
-        console.error("Failed to fetch products:", error);
-        // Fallback or error state handling
+        const rawData = await res.json();
+        
+        // --- 2. Zod Validation in Real Time ---
+        const validatedData = ProductsArraySchema.parse(rawData);
+        
+        setProducts(validatedData);
+
+      } catch (e) {
+        console.error("Failed to fetch or validate products:", e);
+        if (e instanceof z.ZodError) {
+            setError(`Data validation failed: ${e.errors[0].message}`);
+        } else {
+            setError(`Could not fetch data. Check API endpoint.`);
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProducts();
-  }, []);
+    fetchAndValidateProducts();
+  }, []); // Empty dependency array means this runs once on mount
 
   // Framer Motion variants for staggered appearance
   const containerVariants = {
@@ -114,11 +128,14 @@ export default function Hero() {
             </Link>
           </div>
 
-          {/* New Product Preview Design (Circular & Overlapping) */}
+          {/* Product Preview & Status */}
           <div className="pt-12">
             <h3 className="text-lg font-semibold text-pink-300 mb-4 text-center md:text-left">Top New Arrivals:</h3>
+            
             {loading ? (
               <p className="text-gray-400">Loading today's featured products...</p>
+            ) : error ? (
+                <p className="text-red-400 font-semibold">🚨 Error: {error}</p>
             ) : (
               <motion.div
                 className="flex justify-center md:justify-start -space-x-4 sm:-space-x-6"
@@ -130,20 +147,20 @@ export default function Hero() {
                   <motion.div
                     key={product.id}
                     variants={itemVariants}
-                    style={{ zIndex: 10 - index }} // Ensures correct overlap order
+                    style={{ zIndex: 10 - index }} 
                     title={product.name}
                     className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-gray-900 overflow-hidden relative cursor-pointer group transition-transform duration-300 hover:scale-105"
                   >
                     <Image
                       src={product.image}
                       alt={product.name}
-                      fill // Use fill to cover the circular container
+                      fill 
                       sizes="(max-width: 768px) 100vw, 33vw"
                       style={{ objectFit: "cover" }}
-                      priority={index === 0} // Prioritize loading the first image
+                      priority={index === 0} 
                       className="transition-opacity duration-500 ease-in-out group-hover:opacity-80"
+                      // NOTE: If your API uses relative paths, you may need to prepend your domain here.
                     />
-                    {/* Optional: Hover overlay for quick info */}
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                         <span className="text-xs font-bold text-white">${Math.round(product.price)}</span>
                     </div>
@@ -174,13 +191,12 @@ export default function Hero() {
           <Image
             src="/hero-pink-fashion.png"
             alt="Fashion Hero"
-            priority // High priority for the main image
-            fill // Fill the parent div
+            priority 
+            fill 
             sizes="(max-width: 768px) 100vw, 50vw"
             style={{ objectFit: "contain" }}
             className="drop-shadow-[0_25px_25px_rgba(236,72,153,0.5)] rounded-2xl"
           />
-          {/* Optional: Add a subtle animated glow/dot */}
           <div className="absolute top-1/4 left-0 w-8 h-8 bg-pink-400 rounded-full blur-xl animate-pulse" />
         </motion.div>
       </div>
