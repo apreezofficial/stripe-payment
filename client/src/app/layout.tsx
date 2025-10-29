@@ -2,6 +2,7 @@
 import { Inter } from 'next/font/google';
 import { CartProvider } from '@/context/CartContext'; // <-- Import the provider
 import { Toaster } from 'sonner'; // <-- Recommended for showing toasts
+import "./globals.css";
 
 const inter = Inter({ subsets: ['latin'] });
 
