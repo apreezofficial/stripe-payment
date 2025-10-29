@@ -200,7 +200,7 @@ export default function Hero() {
           className="mt-16 md:mt-0 relative w-[320px] h-[320px] md:w-[480px] md:h-[480px] flex-shrink-0"
         >
           <Image
-            src="/hero-pink-fashion.png"
+            src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTmnztD_4aroVKSfoQo_qNH_Ac5NZDPaX47_vFfefMLM2EzJFXZkfwZRfc&s"
             alt="Fashion Hero"
             priority 
             fill 
