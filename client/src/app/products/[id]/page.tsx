@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useState, useContext } from "react";
-import { CartContext } from "@/context/CartContext"; // Import Cart Context
+import { CartContext } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { z } from "zod";
 import { ArrowLeft, ShoppingCart } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation"; // Hook for Next.js 13+ App Router
+import { useParams } from "next/navigation";
 
-// --- Zod Schema Definitions (Reused from Hero, but making all fields required for the detail page) ---
+// --- Zod Schema Definitions (Unchanged) ---
 const ProductSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -21,7 +21,7 @@ const ProductSchema = z.object({
 });
 type Product = z.infer<typeof ProductSchema>;
 
-// API response for single product
+// API response for single product (Unchanged)
 const ApiResponseSchema = z.object({
     data: ProductSchema,
     message: z.string().optional(),
@@ -35,9 +35,11 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { addToCart } = useContext(CartContext);
+  const { addToCart } = useContext(CartContext); // Successfully consuming context
 
+  // --- Fetch Logic (Unchanged) ---
   useEffect(() => {
+    // ... (fetch logic remains the same) ...
     if (!productId) {
         setLoading(false);
         setError("No product ID provided.");
@@ -48,7 +50,6 @@ export default function ProductDetail() {
       setLoading(true);
       setError(null);
       
-      // NEW API ENDPOINT: product.php?id=A101
       const apiEndpoint = `${process.env.NEXT_PUBLIC_API_URL}/product.php?id=${productId}`; 
       
       try {
@@ -59,7 +60,6 @@ export default function ProductDetail() {
         }
 
         const rawData = await res.json();
-        
         const validatedResponse = ApiResponseSchema.parse(rawData);
         
         setProduct(validatedResponse.data);
@@ -75,12 +75,15 @@ export default function ProductDetail() {
     fetchProduct();
   }, [productId]);
   
-  // Handlers
+  // --- HANDLERS: THE FIX IS HERE ---
   const handleAddToCart = () => {
       if (product) {
-          addToCart(product);
+          // FIX: Explicitly pass ONLY the required properties to the CartContext
+          const { id, name, price, image } = product;
+          addToCart({ id, name, price, image }); // Pass the correct, simplified object
       }
   };
+  // ----------------------------------
 
 
   if (loading) {
@@ -108,7 +111,7 @@ export default function ProductDetail() {
       <div className="max-w-6xl mx-auto bg-white shadow-2xl rounded-xl overflow-hidden">
         <div className="md:flex">
           
-          {/* Product Image */}
+          {/* Product Image (Unchanged) */}
           <div className="md:flex-shrink-0 relative h-96 w-full md:w-1/2">
             <Image
               src={product.image}
@@ -121,7 +124,7 @@ export default function ProductDetail() {
             />
           </div>
 
-          {/* Product Details */}
+          {/* Product Details (Unchanged) */}
           <div className="p-8 md:w-1/2 flex flex-col justify-between">
             <div>
                 <h1 className="text-4xl font-extrabold text-gray-900 mb-2">{product.name}</h1>
@@ -137,7 +140,7 @@ export default function ProductDetail() {
             {/* Actions */}
             <div className="mt-8">
               <Button 
-                onClick={handleAddToCart}
+                onClick={handleAddToCart} // <-- This handler now uses the fix
                 className="w-full bg-pink-500 text-white hover:bg-pink-600 py-3 text-lg font-semibold shadow-lg shadow-pink-500/50 transition-all duration-300 transform hover:scale-[1.01]"
               >
                 <ShoppingCart className="mr-3 h-5 w-5" /> Add to Cart
@@ -147,7 +150,7 @@ export default function ProductDetail() {
         </div>
       </div>
       
-      {/* Back Link */}
+      {/* Back Link (Unchanged) */}
       <div className="max-w-6xl mx-auto mt-8">
           <Link href="/products" passHref>
               <Button variant="outline" className="border-gray-300 text-gray-700 hover:bg-gray-100">
@@ -157,4 +160,4 @@ export default function ProductDetail() {
       </div>
     </div>
   );
-    }
+}
