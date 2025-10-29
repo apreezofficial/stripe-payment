@@ -19,6 +19,7 @@ interface CartContextType {
   addToCart: (product: { id: string, name: string, price: number, image: string }) => void;
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
+  clearCart: () => void; // <--- ADDED THIS
   cartTotal: number;
 }
 
@@ -28,6 +29,7 @@ export const CartContext = createContext<CartContextType>({
   addToCart: () => {},
   removeFromCart: () => {},
   updateQuantity: () => {},
+  clearCart: () => {}, // <--- ADDED THIS
   cartTotal: 0,
 });
 
@@ -74,9 +76,18 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       );
     });
   };
+  
+  // --- IMPLEMENTED CLEAR CART FUNCTION ---
+  const clearCart = () => {
+      setCart([]);
+      toast.success("Cart successfully cleared after checkout.");
+  };
+  // ----------------------------------------
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, cartTotal }}>
+    <CartContext.Provider 
+      value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, cartTotal }} // <--- ADDED clearCart here
+    >
       {children}
     </CartContext.Provider>
   );
