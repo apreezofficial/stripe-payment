@@ -5,7 +5,7 @@ import { CartContext } from "@/context/CartContext";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
-import { Trash2, Plus, Minus, CheckCircle } from "lucide-react";
+import { Trash2, Plus, Minus, CheckCircle, ShoppingCart } from "lucide-react";
 import CheckoutForm from "@/components/CheckoutForm"; // We will create this component next
 
 export default function CartPage() {
