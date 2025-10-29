@@ -1,9 +1,10 @@
 // components/CheckoutForm.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { Button } from "./ui/button";
-import { X, Loader2, CreditCard } from "lucide-react";
+import { X, Loader2, CreditCard, CheckCircle } from "lucide-react";
+import { CartContext } from "@/context/CartContext"; // Use CartContext to clear cart on success
 
 interface CartItemSummary {
     id: string;
@@ -19,18 +20,20 @@ interface CheckoutFormProps {
 }
 
 export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps) {
+    const { clearCart } = useContext(CartContext); // Assuming you've added clearCart to your CartContext
     const [formData, setFormData] = useState({
         name: '',
         email: '',
         address: '',
         city: '',
         zip: '',
-        country: 'Nigeria', // Default
+        country: 'NG', // Using ISO code for Nigeria
     });
     const [loading, setLoading] = useState(false);
     const [paymentStatus, setPaymentStatus] = useState<'idle' | 'success' | 'failure'>('idle');
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
@@ -38,6 +41,7 @@ export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps
         e.preventDefault();
         setLoading(true);
         setPaymentStatus('idle');
+        setErrorMessage(null);
 
         // Prepare data to send to the backend
         const checkoutData = {
@@ -51,8 +55,7 @@ export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps
             currency: 'USD',
         };
         
-        // --- 1. Submission to Backend Payment Endpoint ---
-        // NOTE: Replace the placeholder URL with your actual hosted PHP file path
+        // Submission to Backend Payment Endpoint
         const paymentEndpoint = `${process.env.NEXT_PUBLIC_API_URL}/payment.php`;
 
         try {
@@ -67,18 +70,19 @@ export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps
             const result = await res.json();
             
             if (res.ok && result.success) {
-                // In a real scenario, the backend would redirect to Stripe Checkout
-                // or return a client secret to initialize a Stripe Element.
                 setPaymentStatus('success');
-                // You would typically clear the cart here: clearCart();
+                // You would typically clear the cart here:
+                // clearCart(); 
             } else {
                 console.error("Payment failed result:", result);
                 setPaymentStatus('failure');
+                setErrorMessage(result.error || "Payment failed due to an unknown error.");
             }
 
         } catch (error) {
             console.error("Network or submission error:", error);
             setPaymentStatus('failure');
+            setErrorMessage("Network error: Could not connect to payment gateway.");
         } finally {
             setLoading(false);
         }
@@ -88,8 +92,8 @@ export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps
         return (
             <div className="text-center p-8">
                 <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-gray-900">Payment Successful!</h3>
-                <p className="text-gray-600 mt-2">Your order has been placed and is being processed.</p>
+                <h3 className="text-2xl font-bold text-gray-900">Payment Successful! 🎉</h3>
+                <p className="text-gray-600 mt-2">Your order has been placed successfully and your card was charged ${total.toFixed(2)}.</p>
                 <Button onClick={onClose} className="mt-6 bg-pink-500">Close & View Order</Button>
             </div>
         );
@@ -97,12 +101,17 @@ export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps
     
     // The main form
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
-            <button type="button" onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+        <form onSubmit={handleSubmit} className="space-y-6 relative">
+            <button 
+                type="button" 
+                onClick={onClose} 
+                className="absolute top-0 right-0 text-gray-400 hover:text-gray-600 transition-colors"
+                title="Close"
+            >
                 <X className="h-6 w-6" />
             </button>
             
-            <h4 className="text-xl font-semibold border-b pb-2">Customer Information</h4>
+            <h4 className="text-xl font-semibold border-b pb-2 text-pink-600">Customer Information</h4>
             <input 
                 type="text" 
                 name="name" 
@@ -110,7 +119,7 @@ export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps
                 value={formData.name} 
                 onChange={handleChange} 
                 required
-                className="w-full p-3 border rounded-lg focus:ring-pink-500 focus:border-pink-500"
+                className="w-full p-3 border rounded-lg focus:ring-pink-500 focus:border-pink-500 transition-shadow"
             />
             <input 
                 type="email" 
@@ -119,10 +128,10 @@ export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps
                 value={formData.email} 
                 onChange={handleChange} 
                 required
-                className="w-full p-3 border rounded-lg focus:ring-pink-500 focus:border-pink-500"
+                className="w-full p-3 border rounded-lg focus:ring-pink-500 focus:border-pink-500 transition-shadow"
             />
 
-            <h4 className="text-xl font-semibold border-b pb-2 pt-4">Shipping Details</h4>
+            <h4 className="text-xl font-semibold border-b pb-2 pt-4 text-pink-600">Shipping Details</h4>
             <input 
                 type="text" 
                 name="address" 
@@ -130,7 +139,7 @@ export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps
                 value={formData.address} 
                 onChange={handleChange} 
                 required
-                className="w-full p-3 border rounded-lg focus:ring-pink-500 focus:border-pink-500"
+                className="w-full p-3 border rounded-lg focus:ring-pink-500 focus:border-pink-500 transition-shadow"
             />
             <div className="grid grid-cols-2 gap-4">
                 <input 
@@ -140,7 +149,7 @@ export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps
                     value={formData.city} 
                     onChange={handleChange} 
                     required
-                    className="w-full p-3 border rounded-lg focus:ring-pink-500 focus:border-pink-500"
+                    className="w-full p-3 border rounded-lg focus:ring-pink-500 focus:border-pink-500 transition-shadow"
                 />
                 <input 
                     type="text" 
@@ -149,31 +158,46 @@ export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps
                     value={formData.zip} 
                     onChange={handleChange} 
                     required
-                    className="w-full p-3 border rounded-lg focus:ring-pink-500 focus:border-pink-500"
+                    className="w-full p-3 border rounded-lg focus:ring-pink-500 focus:border-pink-500 transition-shadow"
                 />
             </div>
-            
-            <div className="border p-4 rounded-lg bg-pink-50 text-pink-800 font-bold flex justify-between">
+            {/* Country is set to Nigeria by default, but allows selection */}
+             <select
+                name="country"
+                value={formData.country}
+                onChange={handleChange}
+                required
+                className="w-full p-3 border rounded-lg focus:ring-pink-500 focus:border-pink-500 bg-white"
+             >
+                <option value="NG">Nigeria (NGN)</option>
+                <option value="US">United States (USD)</option>
+                <option value="GB">United Kingdom (GBP)</option>
+                <option value="CA">Canada (CAD)</option>
+             </select>
+
+            <div className="border border-pink-200 p-4 rounded-lg bg-pink-50 text-gray-900 font-bold flex justify-between shadow-sm">
                 <span>Total Due:</span>
-                <span>${total.toFixed(2)}</span>
+                <span className="text-pink-700 text-xl">${total.toFixed(2)}</span>
             </div>
+
+            {paymentStatus === 'failure' && errorMessage && (
+                <p className="text-red-500 text-center font-medium border border-red-300 bg-red-50 p-2 rounded-lg">
+                    {errorMessage}
+                </p>
+            )}
 
             <Button 
                 type="submit" 
-                className="w-full bg-green-500 hover:bg-green-600 text-white py-3 text-lg font-semibold flex items-center"
-                disabled={loading}
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg font-semibold flex items-center shadow-lg transition-all duration-300"
+                disabled={loading || cart.length === 0}
             >
                 {loading ? (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 ) : (
                     <CreditCard className="mr-2 h-5 w-5" />
                 )}
-                {loading ? 'Processing Payment...' : 'Pay Now'}
+                {loading ? 'Processing Payment...' : `Pay $${total.toFixed(2)} Now`}
             </Button>
-            
-            {paymentStatus === 'failure' && (
-                <p className="text-red-500 text-center mt-3">Payment failed. Please check your details and try again.</p>
-            )}
         </form>
     );
 }
