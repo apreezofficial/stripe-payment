@@ -49,7 +49,7 @@ export default function ProductDetail() {
       setError(null);
       
       // NEW API ENDPOINT: product.php?id=A101
-      const apiEndpoint = `${process.env.NEXT_PUBLIC_API_URL}/product.php?id=${productId}`; 
+      const apiEndpoint = `${process.env.NEXT_PUBLIC_API_URL}/products.php?id=${productId}`; 
       
       try {
         const res = await fetch(apiEndpoint, { cache: "no-store" });
