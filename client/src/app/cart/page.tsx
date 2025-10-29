@@ -6,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
 import { Trash2, Plus, Minus, CheckCircle, ShoppingCart } from "lucide-react";
-import CheckoutForm from "@/components/CheckoutForm"; // We will create this component next
+import CheckoutForm from "@/components/CheckoutForm"; 
 
 export default function CartPage() {
-  const { cart, removeFromCart, updateQuantity, cartTotal } = useContext(CartContext);
+  // We consume the 'cart' array, which is already populated from localStorage by the CartProvider.
+  const { cart, removeFromCart, updateQuantity, cartTotal, clearCart } = useContext(CartContext);
+  
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const shippingCost = 15.00; // Fixed shipping cost example
+  const shippingCost = 15.00; // Example fixed shipping cost
   const subtotal = cartTotal;
   const grandTotal = subtotal + shippingCost;
 
@@ -142,4 +144,4 @@ export default function CartPage() {
       </div>
     </div>
   );
-          }
+}
