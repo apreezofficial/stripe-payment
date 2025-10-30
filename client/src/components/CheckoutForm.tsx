@@ -3,8 +3,8 @@
 
 import { useState, useContext } from "react";
 import { Button } from "./ui/button";
-import { X, Loader2, CreditCard, CheckCircle } from "lucide-react";
-import { CartContext } from "@/context/CartContext"; // Use CartContext to clear cart on success
+import { X, Loader2, CreditCard } from "lucide-react";
+import { CartContext } from "@/context/CartContext";
 
 interface CartItemSummary {
     id: string;
@@ -20,17 +20,16 @@ interface CheckoutFormProps {
 }
 
 export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps) {
-    const { clearCart } = useContext(CartContext); // Assuming you've added clearCart to your CartContext
+    const { clearCart } = useContext(CartContext);
     const [formData, setFormData] = useState({
         name: '',
         email: '',
         address: '',
         city: '',
         zip: '',
-        country: 'NG', // Using ISO code for Nigeria
+        country: 'US', // Default country code
     });
     const [loading, setLoading] = useState(false);
-    const [paymentStatus, setPaymentStatus] = useState<'idle' | 'success' | 'failure'>('idle');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -40,7 +39,6 @@ export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        setPaymentStatus('idle');
         setErrorMessage(null);
 
         // Prepare data to send to the backend
@@ -52,10 +50,8 @@ export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps
                 price: item.price,
             })),
             total_amount: total,
-            currency: 'USD',
         };
         
-        // Submission to Backend Payment Endpoint
         const paymentEndpoint = `${process.env.NEXT_PUBLIC_API_URL}/payment.php`;
 
         try {
@@ -69,37 +65,29 @@ export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps
 
             const result = await res.json();
             
-            if (res.ok && result.success) {
-                setPaymentStatus('success');
-                // You would typically clear the cart here:
-                // clearCart(); 
+            if (res.ok && result.success && result.redirect_url) {
+                
+                // --- REDIRECT TO STRIPE CHECKOUT URL ---
+                // This opens the external Stripe page where the user enters card details.
+                window.location.href = result.redirect_url; 
+                
+                // NOTE: Because we redirect, we might not reach clearCart() here.
+                // The actual cart clearing must happen on the SUCCESS_URL endpoint 
+                // (e.g., /order-success) after Stripe confirms payment.
+                
             } else {
-                console.error("Payment failed result:", result);
-                setPaymentStatus('failure');
-                setErrorMessage(result.error || "Payment failed due to an unknown error.");
+                console.error("Backend Setup Failed:", result);
+                setErrorMessage(result.error || "Failed to get payment URL from server.");
             }
 
         } catch (error) {
-            console.error("Network or submission error:", error);
-            setPaymentStatus('failure');
+            console.error("Network error:", error);
             setErrorMessage("Network error: Could not connect to payment gateway.");
         } finally {
             setLoading(false);
         }
     };
 
-    if (paymentStatus === 'success') {
-        return (
-            <div className="text-center p-8">
-                <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-gray-900">Payment Successful! 🎉</h3>
-                <p className="text-gray-600 mt-2">Your order has been placed successfully and your card was charged ${total.toFixed(2)}.</p>
-                <Button onClick={onClose} className="mt-6 bg-pink-500">Close & View Order</Button>
-            </div>
-        );
-    }
-    
-    // The main form
     return (
         <form onSubmit={handleSubmit} className="space-y-6 relative">
             <button 
@@ -161,7 +149,6 @@ export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps
                     className="w-full p-3 border rounded-lg focus:ring-pink-500 focus:border-pink-500 transition-shadow"
                 />
             </div>
-            {/* Country is set to Nigeria by default, but allows selection */}
              <select
                 name="country"
                 value={formData.country}
@@ -169,10 +156,10 @@ export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps
                 required
                 className="w-full p-3 border rounded-lg focus:ring-pink-500 focus:border-pink-500 bg-white"
              >
-                <option value="NG">Nigeria (NGN)</option>
-                <option value="US">United States (USD)</option>
-                <option value="GB">United Kingdom (GBP)</option>
-                <option value="CA">Canada (CAD)</option>
+                <option value="NG">Nigeria (NG)</option>
+                <option value="US">United States (US)</option>
+                <option value="GB">United Kingdom (GB)</option>
+                <option value="CA">Canada (CA)</option>
              </select>
 
             <div className="border border-pink-200 p-4 rounded-lg bg-pink-50 text-gray-900 font-bold flex justify-between shadow-sm">
@@ -180,7 +167,7 @@ export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps
                 <span className="text-pink-700 text-xl">${total.toFixed(2)}</span>
             </div>
 
-            {paymentStatus === 'failure' && errorMessage && (
+            {errorMessage && (
                 <p className="text-red-500 text-center font-medium border border-red-300 bg-red-50 p-2 rounded-lg">
                     {errorMessage}
                 </p>
@@ -196,7 +183,7 @@ export default function CheckoutForm({ cart, total, onClose }: CheckoutFormProps
                 ) : (
                     <CreditCard className="mr-2 h-5 w-5" />
                 )}
-                {loading ? 'Processing Payment...' : `Pay $${total.toFixed(2)} Now`}
+                {loading ? 'Preparing Secure Payment...' : `Redirect to Secure Payment`}
             </Button>
         </form>
     );
