@@ -4,16 +4,16 @@
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
 import { toast } from 'sonner';
 
-// Define the shape of a Cart Item (Unchanged)
+// Define the shape of a Cart Item 
 interface CartItem {
   id: string;
   name: string;
   price: number;
-  image: string;
+  image: string; // Used for display, but also sent in order_details
   quantity: number;
 }
 
-// Define the shape of the Context (Unchanged)
+// Define the shape of the Context
 interface CartContextType {
   cart: CartItem[];
   addToCart: (product: { id: string, name: string, price: number, image: string }) => void;
@@ -23,7 +23,6 @@ interface CartContextType {
   cartTotal: number;
 }
 
-// Create the Context (Unchanged)
 export const CartContext = createContext<CartContextType>({
   cart: [],
   addToCart: () => {},
@@ -33,32 +32,24 @@ export const CartContext = createContext<CartContextType>({
   cartTotal: 0,
 });
 
-// Key for localStorage
 const CART_STORAGE_KEY = 'ecomm_user_cart';
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
-  // 1. Initialize state by loading from localStorage
   const [cart, setCart] = useState<CartItem[]>(() => {
     if (typeof window !== 'undefined') {
       const savedCart = localStorage.getItem(CART_STORAGE_KEY);
-      // Return parsed data, or an empty array if nothing is found
       return savedCart ? JSON.parse(savedCart) : [];
     }
     return [];
   });
 
-  // 2. useEffect to save cart to localStorage whenever it changes
   useEffect(() => {
-    // Ensure we are in the browser environment before accessing localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
     }
-  }, [cart]); // This effect runs every time the 'cart' state updates
+  }, [cart]);
 
-  // Calculate total price (Unchanged)
   const cartTotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
-
-  // --- Cart Operations (Unchanged logic, now with persistence via useEffect) ---
 
   const addToCart = (product: { id: string, name: string, price: number, image: string }) => {
     setCart(prevCart => {
@@ -93,10 +84,8 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   
   const clearCart = () => {
       setCart([]);
-      toast.success("Cart successfully cleared after checkout.");
+      toast.success("Cart successfully cleared.");
   };
-
-  // ----------------------------------------
 
   return (
     <CartContext.Provider 
