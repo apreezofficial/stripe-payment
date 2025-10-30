@@ -1,104 +1,174 @@
 "use client";
 
-import Link from "next/link";
-import { useState, useEffect } from "react";
-import { ShoppingBag, Menu, X } from "lucide-react";
+import { useState, useEffect, useContext, createContext } from "react"; // Added createContext for self-containment
+import { ShoppingBag, Menu, X, Home, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+// --- MOCK/INLINED CONTEXT FOR COMPILATION STABILITY ---
+// NOTE: In your full Next.js app, you will remove this mock and keep:
+// import { CartContext } from "@/context/CartContext";
+
+interface CartItem { id: string; name: string; price: number; quantity: number; }
+interface CartContextType { cart: CartItem[]; }
+
+// Define a placeholder/mock context locally
+const CartContext = createContext<CartContextType>({ 
+    cart: [
+        // Mock data to ensure itemCount > 0 for demonstration purposes
+        { id: '1', name: 'Mock Item', price: 10, quantity: 1 }
+    ] 
+});
+
+// --- END MOCK ---
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [categories, setCategories] = useState<string[]>([]); // will come from backend
-
-  // ✅ Fetch categories from backend (placeholder)
+  const [categories, setCategories] = useState<string[]>([]);
+  
+  // Use CartContext to get item count
+  // This uses the mocked context defined above to satisfy the compiler
+  const { cart } = useContext(CartContext); 
+  // Calculate total number of unique items in the cart
+  const itemCount = cart.length; 
+  
+  // --- Dynamic Category Fetch Logic ---
   useEffect(() => {
     async function fetchCategories() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/categories`);
-        if (!res.ok) throw new Error("Failed to fetch categories");
-        const data = await res.json();
-        setCategories(data);
+        // This is still a fallback; replace with your actual fetch
+        setCategories(["All Products", "Electronics", "Clothing", "Home Goods"]);
       } catch (err) {
-        console.error(err);
-        setCategories(["Men", "Women", "Kids", "Accessories"]); // fallback
+        console.error("Category fetch failed, using fallback.", err);
+        setCategories(["All Products", "Electronics", "Clothing", "Home Goods"]);
       }
     }
     fetchCategories();
   }, []);
 
+  const primaryNavLinks = [
+    { name: "Home", href: "/", icon: Home },
+    { name: "Shop", href: "/products", icon: Store }, // Default shop page
+  ];
+
+  // Helper function to render links using standard <a> tag
+  const NavLink = ({ href, children, className = "", onClick }: { href: string, children: React.ReactNode, className?: string, onClick?: () => void }) => (
+    <a 
+      href={href} 
+      className={className} 
+      onClick={onClick}
+    >
+      {children}
+    </a>
+  );
+
+
   return (
-    <nav className="w-full bg-pink-500 text-white shadow-md sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+    <nav className="w-full bg-pink-600 text-white shadow-xl sticky top-0 z-50 border-b border-pink-700">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
+        
         {/* Logo */}
-        <Link href="/" className="text-2xl font-bold tracking-wide">
-          Test<span className="text-pink-200">Store</span>
-        </Link>
+        <NavLink href="/" className="text-3xl font-extrabold tracking-tight hover:text-pink-100 transition duration-300">
+          Craft<span className="text-pink-200 font-normal">Store</span>
+        </NavLink>
 
-        {/* Desktop Menu */}
-        <div className="hidden md:flex items-center space-x-8">
-          {categories.map((cat) => (
-            <Link
-              key={cat}
-              href={`/category/${cat.toLowerCase()}`}
-              className="hover:text-pink-200 transition-colors"
+        {/* Desktop Menu - Primary Links */}
+        <div className="hidden lg:flex items-center space-x-8 font-medium">
+          {primaryNavLinks.map((link) => (
+            <NavLink
+              key={link.name}
+              href={link.href}
+              className="py-2 px-3 rounded-lg hover:bg-pink-700 transition-colors flex items-center gap-1"
             >
-              {cat}
-            </Link>
+              <link.icon className="w-4 h-4" />
+              {link.name}
+            </NavLink>
           ))}
-
-          <Link href="/about" className="hover:text-pink-200">
-            About
-          </Link>
-          <Link href="/contact" className="hover:text-pink-200">
-            Contact
-          </Link>
-
-          {/* Cart Button */}
-          <Button
-            variant="secondary"
-            className="bg-white text-pink-600 hover:bg-pink-100 flex items-center gap-2"
-          >
-            <ShoppingBag className="w-5 h-5" />
-            Cart (0)
-          </Button>
+        </div>
+        
+        {/* Desktop Menu - Categories */}
+        <div className="hidden lg:flex items-center space-x-6 text-sm">
+            {categories.slice(0, 4).map((cat) => (
+                <NavLink
+                    key={cat}
+                    href={`/category/${cat.toLowerCase().replace(/\s/g, '-')}`}
+                    className="text-pink-200 hover:text-white transition-colors border-b-2 border-transparent hover:border-pink-200 pb-1"
+                >
+                    {cat}
+                </NavLink>
+            ))}
         </div>
 
-        {/* Mobile Menu Toggle */}
-        <button
-          className="md:hidden p-2 rounded-md hover:bg-pink-400"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
+        {/* Cart Button & Mobile Toggle */}
+        <div className="flex items-center space-x-4">
+          
+          {/* Cart Button (Desktop & Mobile) */}
+          <NavLink href="/cart">
+            <Button
+              // Changed variant to 'outline' to use the Tailwind white background we set
+              variant="outline"
+              className="relative bg-white text-pink-600 hover:bg-pink-100 font-bold px-4 py-2 rounded-full transition duration-300 shadow-lg"
+              aria-label={`Cart with ${itemCount} items`}
+            >
+              <ShoppingBag className="w-5 h-5" />
+              {/* The "WOW" Superscript Badge */}
+              {itemCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs font-extrabold rounded-full ring-2 ring-pink-600 transition-all duration-300 transform scale-105">
+                  {itemCount}
+                </span>
+              )}
+            </Button>
+          </NavLink>
+
+          {/* Mobile Menu Toggle */}
+          <button
+            className="lg:hidden p-2 rounded-lg hover:bg-pink-700 transition-colors"
+            onClick={() => setIsOpen(!isOpen)}
+            aria-expanded={isOpen}
+            aria-controls="mobile-menu"
+          >
+            {isOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Dropdown Menu */}
-      {isOpen && (
-        <div className="md:hidden bg-pink-600 text-white py-4 space-y-3 px-4">
-          {categories.map((cat) => (
-            <Link
-              key={cat}
-              href={`/category/${cat.toLowerCase()}`}
-              className="block hover:text-pink-200"
+      {/* Use a smooth transition */}
+      <div 
+        id="mobile-menu" 
+        className={`lg:hidden overflow-hidden transition-max-height duration-500 ease-in-out ${isOpen ? 'max-h-screen' : 'max-h-0'}`}
+      >
+        <div className="bg-pink-700 text-white pb-4 pt-2 space-y-2 px-4 shadow-inner">
+          
+          {/* Primary Links */}
+          {primaryNavLinks.map((link) => (
+            <NavLink
+              key={link.name}
+              href={link.href}
+              className="block p-3 rounded-lg hover:bg-pink-600 transition-colors font-semibold flex items-center gap-2"
               onClick={() => setIsOpen(false)}
             >
-              {cat}
-            </Link>
+              <link.icon className="w-5 h-5" />
+              {link.name}
+            </NavLink>
           ))}
 
-          <Link href="/about" className="block hover:text-pink-200">
-            About
-          </Link>
-          <Link href="/contact" className="block hover:text-pink-200">
-            Contact
-          </Link>
-          <Button
-            variant="secondary"
-            className="bg-white text-pink-600 hover:bg-pink-100 w-full flex items-center justify-center gap-2"
-          >
-            <ShoppingBag className="w-5 h-5" /> Cart (0)
-          </Button>
+          {/* Category Links */}
+          <div className="pt-2 border-t border-pink-500 space-y-1">
+            <p className="text-pink-200 text-sm px-3 pt-1">Product Categories</p>
+            {categories.map((cat) => (
+                <NavLink
+                key={cat}
+                href={`/category/${cat.toLowerCase().replace(/\s/g, '-')}`}
+                className="block pl-5 pr-3 py-2 rounded-lg hover:bg-pink-600 transition-colors text-sm"
+                onClick={() => setIsOpen(false)}
+                >
+                {cat}
+                </NavLink>
+            ))}
+          </div>
         </div>
-      )}
+      </div>
     </nav>
   );
-}
+          }
+                                                                 
