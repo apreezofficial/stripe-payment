@@ -23,7 +23,7 @@ export default function OrderStatusPage() {
             <h1 className="text-3xl font-bold text-gray-900 mb-3">Payment Successful!</h1>
             <p className="text-gray-600 mb-6">
               Thank you for your purchase. Your order has been placed and confirmed. 
-              We'll send a receipt to your email shortly.
+              We will send a receipt to your email shortly.
             </p>
             {sessionId && (
                 <p className="text-sm text-gray-500 mb-6">
